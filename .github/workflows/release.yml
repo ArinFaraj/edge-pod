@@ -10,7 +10,7 @@ jobs:
   build:
     outputs:
       tag: ${{ steps.pkg.outputs.tag }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -22,7 +22,7 @@ jobs:
         run: |
           flutter pub get
           cd edge_pod_server
-          dart build cli --target bin/main.dart --output build
+          dart build cli --target bin/main.dart --target-os=linux --target-arch=arm64 --output build
           cp -R config build/bundle/config
           cp -R migrations build/bundle/migrations
           cd ..
