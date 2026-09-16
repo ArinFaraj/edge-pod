@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
 
       - name: Install dependencies
-        run: |
-          cd edge_pod_server
-          dart pub get
+        run: flutter pub get
 
       - name: Run server tests
-        run: |
-          cd edge_pod_server
-          dart test
+        working-directory: edge_pod_server
+        run: dart test

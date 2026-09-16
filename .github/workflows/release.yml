@@ -13,12 +13,15 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
       - name: Build
         id: pkg
         run: |
+          flutter pub get
           cd edge_pod_server
-          dart pub get
           dart build cli --target bin/main.dart --output build
           cp -R config build/bundle/config
           cp -R migrations build/bundle/migrations
