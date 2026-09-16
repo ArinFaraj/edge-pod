@@ -62,21 +62,23 @@ EOF
 
   bump:
     needs: build
-    if: ${{ secrets.EDGE_STATE_APP_ID != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/create-github-app-token@v2
         id: token
+        continue-on-error: true
         with:
           app-id: ${{ secrets.EDGE_STATE_APP_ID }}
           private-key: ${{ secrets.EDGE_STATE_APP_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: edge-state
       - uses: actions/checkout@v4
+        if: steps.token.outcome == 'success'
         with:
           repository: ${{ github.repository_owner }}/edge-state
           token: ${{ steps.token.outputs.token }}
           fetch-depth: 0
       - run: ci/bump "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "${{ needs.build.outputs.tag }}"
+        if: steps.token.outcome == 'success'
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
