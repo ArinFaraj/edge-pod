@@ -23,20 +23,20 @@ jobs:
           cp -R config build/bundle/config
           cp -R migrations build/bundle/migrations
           cd ..
-          cat << 'EOF' > edge-pod
-#!/bin/sh
-set -e
-HASH=$(sha256sum "$0" 2>/dev/null | cut -c1-16 || echo "default")
-DIR="${TMPDIR:-/tmp}/edge-pod-$HASH"
-if [ ! -f "$DIR/.unpacked" ]; then
-  mkdir -p "$DIR"
-  sed '1,/^#__ARCHIVE__#/d' "$0" | tar -xz -C "$DIR"
-  touch "$DIR/.unpacked"
-fi
-cd "$DIR"
-exec "$DIR/bin/main" "$@"
-#__ARCHIVE__#
-EOF
+          {
+            echo '#!/bin/sh'
+            echo 'set -e'
+            echo 'HASH=$(sha256sum "$0" 2>/dev/null | cut -c1-16 || echo "default")'
+            echo 'DIR="${TMPDIR:-/tmp}/edge-pod-$HASH"'
+            echo 'if [ ! -f "$DIR/.unpacked" ]; then'
+            echo '  mkdir -p "$DIR"'
+            echo '  sed '\''1,/^#__ARCHIVE__#/d'\'' "$0" | tar -xz -C "$DIR"'
+            echo '  touch "$DIR/.unpacked"'
+            echo 'fi'
+            echo 'cd "$DIR"'
+            echo 'exec "$DIR/bin/main" "$@"'
+            echo '#__ARCHIVE__#'
+          } > edge-pod
           tar -czf bundle.tar.gz -C edge_pod_server/build/bundle .
           cat bundle.tar.gz >> edge-pod
           tar -czf dist.tgz -C edge_pod_server/build/bundle .
