@@ -1,0 +1,24 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Install dependencies
+        run: |
+          cd edge_pod_server
+          dart pub get
+
+      - name: Run server tests
+        run: |
+          cd edge_pod_server
+          dart test

@@ -1,0 +1,15 @@
+apiServer:
+  port: 9205
+  publicHost: pod.arin.at
+  publicPort: 443
+  publicScheme: https
+
+database:
+  filePath: /srv/edge/apps/edge-pod/data/app.db
+
+maxRequestSize: 524288
+
+sessionLogs:
+  persistentEnabled: false
+  consoleEnabled: true
+  consoleLogFormat: json

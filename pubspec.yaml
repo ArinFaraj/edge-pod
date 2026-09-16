@@ -1,0 +1,11 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: '^3.12.2'
+
+workspace:
+  - edge_pod_client
+  - edge_pod_server
+  - edge_pod_flutter
+

@@ -1,0 +1,82 @@
+name: build-release
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore: ['**/*.md', 'docs/**', '.gitignore', 'LICENSE']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    outputs:
+      tag: ${{ steps.pkg.outputs.tag }}
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - name: Build
+        id: pkg
+        run: |
+          cd edge_pod_server
+          dart pub get
+          dart build cli --target bin/main.dart --output build
+          cp -R config build/bundle/config
+          cp -R migrations build/bundle/migrations
+          cd ..
+          cat << 'EOF' > edge-pod
+#!/bin/sh
+set -e
+HASH=$(sha256sum "$0" 2>/dev/null | cut -c1-16 || echo "default")
+DIR="${TMPDIR:-/tmp}/edge-pod-$HASH"
+if [ ! -f "$DIR/.unpacked" ]; then
+  mkdir -p "$DIR"
+  sed '1,/^#__ARCHIVE__#/d' "$0" | tar -xz -C "$DIR"
+  touch "$DIR/.unpacked"
+fi
+cd "$DIR"
+exec "$DIR/bin/main" "$@"
+#__ARCHIVE__#
+EOF
+          tar -czf bundle.tar.gz -C edge_pod_server/build/bundle .
+          cat bundle.tar.gz >> edge-pod
+          tar -czf dist.tgz -C edge_pod_server/build/bundle .
+          rm -f bundle.tar.gz
+          chmod +x edge-pod
+          sha256sum edge-pod > edge-pod.sha256
+          sha256sum dist.tgz > dist.tgz.sha256
+          echo "${GITHUB_SHA::8}" > VERSION
+          [ "$GITHUB_REF_NAME" = main ] && TAG="sha-${GITHUB_SHA::8}" || TAG="$GITHUB_REF_NAME-${GITHUB_SHA::8}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: "${{ env.TAG }} (${{ github.sha }})"
+          prerelease: ${{ github.ref_name != 'main' }}
+          files: |
+            edge-pod
+            edge-pod.sha256
+            dist.tgz
+            dist.tgz.sha256
+            VERSION
+
+  bump:
+    needs: build
+    if: ${{ secrets.EDGE_STATE_APP_ID != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: token
+        with:
+          app-id: ${{ secrets.EDGE_STATE_APP_ID }}
+          private-key: ${{ secrets.EDGE_STATE_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: edge-state
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/edge-state
+          token: ${{ steps.token.outputs.token }}
+          fetch-depth: 0
+      - run: ci/bump "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "${{ needs.build.outputs.tag }}"
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
